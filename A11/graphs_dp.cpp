@@ -1,65 +1,157 @@
-#include <cmath>
-#include <cstdio>
-#include <vector>
-#include <iostream>
-#include <algorithm>
+#include<bits/stdc++.h>
 using namespace std;
-#define ll long long 
+#define ll long long
+#define vi vector<int>
+#define vvi vector<vi>
+#define ll long long
+#define pb push_back
+#define vll vector<ll>
+class Disjoint_Set_Tree{
+    private:
+    vi root, rank, sum ,depth;
+    vvi LCA, adj;
+    int x,y,n,p,lg;
+    ll count;
+    vll f;
+    public:
+    Disjoint_Set_Tree(int n, int num){
+        root = vi(n,0);
+        depth = vi(n,0);
+        rank = vi(n,0);
+        sum = vi(n,0);
+        lg = 18; 
+        LCA = vvi(lg+1, vector<int>(n,0));
+        adj = vvi(n, vector<int>());
+        f = vll(n,0);
+        this->n = num;
+        count=0;
+    }
+    void take_input(){
+        int u,v;
+        for(int i=0;i<n-1;i++){
+            cin>>u>>v;
+            adj[u].pb(v);
+            adj[v].pb(u);
+        }
+    }
+    void make_set(){
+        for(int i=1;i<=n;i++){
+            root[i]=i;
+            rank[i]=1;
+        }
+    }
+    int find(int x){
+        if(root[x] == x){
+            return x;
+        }
+        else{
+            root[x] = find(root[x]);
+            return root[x];
+        }
+    }    
 
-template <typename T>
-ostream& operator<<(ostream& os, const vector<T>& v)
-{
-    os << "[";
-    for (int i = 0; i < v.size(); ++i) {
-        os << v[i];
-        if (i != v.size() - 1)
-            os << ", ";
+    int anc(int x){
+        return find(LCA[0][find(x)]);
     }
-    os << "]\n";
-    return os;
-}
-void numberOftriplets(int s, int e, vector<ll> &count1, vector<vector<ll>> &adj, ll &c, vector<ll> &d) 
-{ 
-    ll b = c;
-    for (auto u: adj[s]) { 
-        if (u == e) 
-            {
-                c+= (count1[s]-(ll)1)* ((ll)adj.size() - count1[s]);
+
+    int reduce(int x){
+        x = find(x);
+        int y = anc(x);
+        count += (sum[x]*(ll)sum[x] - f[x] - rank[x]) / 2 * rank[y];
+        count += ((n- sum[x]) * (ll)(n - sum[x]) - (f[y] - sum[x] * (ll) sum[x] + (n - sum[y]) * (ll)(n - sum[y])) - rank[y])/ 2 * rank[x];
+        f[y] = f[y] - sum[x] * (ll) sum[x] + f[x];
+        root[x] = y;
+        rank[y] += rank[x];
+       // cout<<count<<" ";
+        return y;
+    }
+    void initialize(int node, int root){
+        sum[node] = 1;
+        LCA[0][node] = root;
+        for(auto i: adj[node]){
+            if(i == root) 
                 continue;
-            }
-        if(count1[u]!= adj.size())
-        c += count1[u]*((ll)adj.size()-count1[u]-(ll)1);
-        //cout<<c<<" ";
-        numberOftriplets(u, s, count1, adj, c, d); 
-    } 
-    d[s]=c-b;
-} 
-void numberOfNodes(int s, int e, vector<ll> &count1, vector<vector<ll>> &adj) 
-{ 
-    count1[s] = 1; 
-    for (auto u: adj[s]) { 
-        if (u == e) 
-            continue; 
-        numberOfNodes(u, s, count1, adj); 
-        count1[s] += count1[u]; 
-    } 
-} 
-int main() {
-    /* Enter your code here. Read input from STDIN. Print output to STDOUT */   
-    ll n,m; cin>>n; vector<vector<ll>> adj(n,vector<ll>());
-    for(int i=0;i<n-1;i++){
-        ll a,b;cin>>a>>b;
-        a--;b--;
-        adj[a].push_back(b);
-        adj[b].push_back(a);
+            depth[i] = depth[node] + 1;
+            initialize(i, node);
+            f[node]+= sum[i]*(ll)sum[i];
+            sum[node]+= sum[i];
+        }
+        count+=(sum[node] - 1)*(ll)(n- sum[node]);
+        count+=((sum[node]-1)*(ll)(sum[node]-1)- f[node])/2;
+
+   // for(int i=1;i<=n;i++) cout<<f[i]<<" ";
     }
-    vector<ll> count1(n,0), wt(n,1);
-    numberOfNodes(0,0,count1,adj);
-    //cout<<count1;
-    ll c = 0;
-    vector<ll>contri(n,0);
-    numberOftriplets(0,0,count1,adj,c,contri);
-    cout<<contri;
-    cout<<c<<"\n";
+    
+    void lca_initialize(){
+        for(int i=1;i<= lg;i++){
+            for(int j =1; j<=n;j++){
+                LCA[i][j] = LCA [i-1][LCA[i-1][j]];
+            }
+        }
+    }
+    int least_common_ancestor(int x, int y){
+        if(depth[x] < depth[y]){
+            int temp = x;
+            x = y;
+            y = temp;
+        }
+        int difference = depth[x] - depth[y];
+        for(int i=0; i<= lg; i++){
+            if(difference & (1<<i)){
+                x = LCA[i][x];
+            }
+        }
+        if(x==y){
+            return x;
+        }
+        for(int i=lg; i>=0;i--){
+            if(LCA[i][x] != LCA[i][y]){
+                 x = LCA[i][x];
+                 y = LCA[i][y];
+            }
+        }
+        
+        return LCA[0][x];
+    }
+    void edge_addition(){
+        cin>>x>>y;
+        x = find(x);
+        y = find(y);
+        //cout<<x<<" "<<y<<" ";
+        if(x == y){
+            print();
+            return;
+        }
+        int r = find(least_common_ancestor(x,y));
+        cout<<r<<" ";
+        while(x != r){
+            x = reduce(x);
+        }
+        while(y != r){
+            y = reduce(y);
+        }
+        print();
+    }
+    void edge_addition_m(int m){
+        while(m--){
+            edge_addition();
+        }
+    }
+    void print(){
+        printf("%lld\n", 2 * count);
+    }
+
+};
+
+int main(){
+    int n;cin>>n;
+    Disjoint_Set_Tree t(2e5 + 6, n);
+    t.take_input();
+    t.make_set();
+    t.initialize(1,0);
+    t.lca_initialize();
+    int m;cin>>m;
+    t.print();
+    t.edge_addition_m(m);
     return 0;
 }
